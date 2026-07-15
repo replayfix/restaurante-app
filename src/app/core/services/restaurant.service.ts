@@ -8,7 +8,7 @@ import { NotificationModalService } from './notification-modal.service';
   providedIn: 'root'
 })
 export class RestaurantService {
-  private notify = inject(NotificationModalService);
+  readonly notify = inject(NotificationModalService);
 
   // Signals state
   readonly salons = signal<Salon[]>([]);
