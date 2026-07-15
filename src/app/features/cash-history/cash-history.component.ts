@@ -153,12 +153,6 @@ import { CashTransaction, PaymentMethod } from '../../core/models';
                         <span><strong>Atendió:</strong> {{ trans.waiterName }}</span>
                       </div>
                     }
-                    @if (trans.chefName) {
-                      <div class="staff-tag chef">
-                        <div class="avatar-mini chef-bg">{{ trans.chefName.charAt(0) }}</div>
-                        <span><strong>Cocina:</strong> {{ trans.chefName }}</span>
-                      </div>
-                    }
                   </div>
                 </td>
                 <td class="time-cell">{{ formatTime(trans.timestamp) }}</td>
@@ -858,6 +852,7 @@ export class CashHistoryComponent {
       description: `Cierre de Caja Turno - Declarado S/. ${this.cashBalance().toFixed(2)}`,
       folio
     });
+    this.restaurant.stopAndClearShiftTimer();
     this.showZModal.set(false);
     
     this.printService.printZReport({

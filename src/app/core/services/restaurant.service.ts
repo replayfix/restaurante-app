@@ -27,6 +27,8 @@ export class RestaurantService {
   readonly selectedTableId = signal<string | null>(null);
   readonly selectedOrderId = signal<string | null>(null);
   readonly searchQuery = signal<string>('');
+  readonly shiftStartTime = signal<number | null>(this.getInitialShiftTime());
+  private clockTick = signal<number>(Date.now());
 
   // Computed views for instant UI reactivity
   readonly activeSalonTables = computed(() => {
@@ -125,7 +127,7 @@ export class RestaurantService {
     const totalSales = this.todaySalesTotal();
     const completedOrdersCount = this.closedTodayOrders().length;
     const averageTicket = completedOrdersCount > 0 ? totalSales / completedOrdersCount : 25.94;
-    const kitchenAvgTimeMinutes = 14;
+    const kitchenAvgTimeMinutes = this.shiftDurationMinutes();
     return {
       totalSales,
       completedOrdersCount,
@@ -222,7 +224,53 @@ export class RestaurantService {
       } catch (e) {}
     }
     this.loadInitialState();
+    setInterval(() => {
+      this.clockTick.set(Date.now());
+    }, 1000);
   }
+
+  private getInitialShiftTime(): number | null {
+    const saved = localStorage.getItem('restaurante_shift_start_time');
+    if (saved) {
+      const num = Number(saved);
+      if (!isNaN(num) && num > 0) return num;
+    }
+    return null;
+  }
+
+  resetAndStartShiftTimer(): void {
+    const now = Date.now();
+    this.shiftStartTime.set(now);
+    localStorage.setItem('restaurante_shift_start_time', now.toString());
+  }
+
+  stopAndClearShiftTimer(): void {
+    this.shiftStartTime.set(null);
+    localStorage.removeItem('restaurante_shift_start_time');
+  }
+
+  readonly shiftDurationSeconds = computed(() => {
+    this.clockTick();
+    const start = this.shiftStartTime();
+    if (!start) return 0;
+    return Math.max(0, Math.floor((Date.now() - start) / 1000));
+  });
+
+  readonly shiftDurationMinutes = computed(() => {
+    return Math.floor(this.shiftDurationSeconds() / 60);
+  });
+
+  readonly formattedShiftTime = computed(() => {
+    const totalSecs = this.shiftDurationSeconds();
+    const hrs = Math.floor(totalSecs / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    const secs = totalSecs % 60;
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    if (hrs > 0) {
+      return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+    }
+    return `${pad(mins)}:${pad(secs)}`;
+  });
 
   switchUser(staff: Staff): void {
     const exists = this.staff().some(s => s.id === staff.id || (s.name.toLowerCase().trim() === staff.name.toLowerCase().trim() && s.role === staff.role));
@@ -232,6 +280,7 @@ export class RestaurantService {
     }
     this.currentUser.set(staff);
     localStorage.setItem('restaurante_active_user', JSON.stringify(staff));
+    this.resetAndStartShiftTimer();
   }
 
   private async loadInitialState(): Promise<void> {

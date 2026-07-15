@@ -163,8 +163,6 @@ export class PrintService {
           <div style="font-weight:bold; margin-top:3px;">MESA: ${order.tableName || 'Mesa 1'}</div>
           <div style="margin-top:4px; font-size:12px; border-top:1px dotted #ccc; padding-top:4px;">
             <div><strong>Atendió (Mesero):</strong> ${order.waiterName || 'Mesero'}</div>
-            ${order.cashierName ? `<div><strong>Cobró (Caja):</strong> ${order.cashierName}</div>` : ''}
-            ${order.chefName ? `<div><strong>Preparó (Cocina):</strong> ${order.chefName}</div>` : ''}
           </div>
         </div>
 
@@ -308,8 +306,7 @@ export class PrintService {
           <span>CAJERO / COBRÓ:</span>
           <span style="font-weight:bold;">${trans.cashier || 'Administrador'}</span>
         </div>
-        ${trans.waiterName ? `<div class="info-row"><span>MESERO:</span><span>${trans.waiterName}</span></div>` : ''}
-        ${trans.chefName ? `<div class="info-row"><span>COCINA / CHEF:</span><span>${trans.chefName}</span></div>` : ''}
+        ${trans.waiterName ? `<div class="info-row"><span>MESERO (ATENDIÓ):</span><span style="font-weight:bold;">${trans.waiterName}</span></div>` : ''}
         <div class="info-row">
           <span>F. PAGO:</span>
           <span>${trans.paymentMethod || 'CASH'}</span>

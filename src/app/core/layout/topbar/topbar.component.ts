@@ -18,6 +18,11 @@ import { RestaurantService } from '../../services/restaurant.service';
 
       <div class="topbar-right">
         <!-- Quick stats / alerts indicator -->
+        <div class="shift-clock-badge" *ngIf="restaurant.shiftStartTime()" title="Tiempo transcurrido en el turno actual (se detiene con el Cierre Z)">
+          <span class="icon">⏱️</span>
+          <span>Turno: <strong>{{ restaurant.formattedShiftTime() }}</strong></span>
+        </div>
+
         <div class="alert-badge" *ngIf="restaurant.lowStockProducts().length > 0">
           <span class="icon">📦</span>
           <span>Alertas de Stock: {{ restaurant.lowStockProducts().length }}</span>
@@ -171,6 +176,20 @@ import { RestaurantService } from '../../services/restaurant.service';
       border-radius: 9999px;
       border: 1px solid #FCA5A5;
       animation: bounce 2s infinite;
+    }
+
+    .shift-clock-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #1E293B, #334155);
+      color: #F8FAFC;
+      font-weight: 600;
+      font-size: 13px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      border: 1px solid #475569;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
     }
 
     .user-profile {
