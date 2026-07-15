@@ -42,7 +42,8 @@ import { TableIconComponent } from '../../../shared/components/table-icon/table-
           <div
             *ngFor="let table of restaurant.activeSalonTables()"
             class="table-card"
-            [style.grid-column]="getGridSpan(table.capacity)"
+            [style.grid-column]="getGridSpan(table.capacity, table.orientation)"
+            [style.grid-row]="getGridRowSpan(table.capacity, table.orientation)"
             [ngClass]="table.status"
             (click)="onTableClick(table)">
             
@@ -54,7 +55,7 @@ import { TableIconComponent } from '../../../shared/components/table-icon/table-
 
             <!-- Table Center Icon & Status Info -->
             <div class="table-card-body" [ngClass]="table.status">
-              <div class="table-icons-row" style="display: flex; gap: 8px; align-items: center; justify-content: center; margin-bottom: 6px;">
+              <div class="table-icons-row" [style.flex-direction]="table.orientation === 'vertical' ? 'column' : 'row'" style="display: flex; gap: 8px; align-items: center; justify-content: center; margin-bottom: 6px;">
                 <app-table-icon *ngFor="let i of getTableIconRange(table.capacity)" [status]="table.status" [size]="50"></app-table-icon>
               </div>
 
@@ -384,7 +385,15 @@ export class PosGridComponent {
     this.router.navigate(['/pos', table.id]);
   }
 
-  getGridSpan(capacity?: number): string {
+  getGridSpan(capacity?: number, orientation?: string): string {
+    if (orientation === 'vertical') return 'span 1';
+    const pax = capacity || 4;
+    const span = Math.min(4, Math.max(1, Math.ceil(pax / 4)));
+    return `span ${span}`;
+  }
+
+  getGridRowSpan(capacity?: number, orientation?: string): string {
+    if (orientation !== 'vertical') return 'span 1';
     const pax = capacity || 4;
     const span = Math.min(4, Math.max(1, Math.ceil(pax / 4)));
     return `span ${span}`;

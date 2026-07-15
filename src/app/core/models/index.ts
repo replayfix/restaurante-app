@@ -14,6 +14,7 @@ export interface Table {
   x: number;
   y: number;
   capacity: number;
+  orientation?: 'horizontal' | 'vertical';
   status: TableStatus;
   currentOrderId?: string;
   currentAmount?: number;

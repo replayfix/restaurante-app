@@ -68,10 +68,14 @@ import { TableIconComponent } from '../../shared/components/table-icon/table-ico
           [cdkDragFreeDragPosition]="{ x: table.x, y: table.y }"
           (cdkDragEnded)="onTableDragEnd($event, table)"
           class="draggable-table"
-          [style.width.px]="getTableWidth(table.capacity)"
+          [style.width.px]="getTableWidth(table.capacity, table.orientation)"
+          [style.height.px]="getTableHeight(table.capacity, table.orientation)"
           [ngClass]="table.status">
           <button class="btn-delete-table" (click)="deleteTable(table.id); $event.stopPropagation()">×</button>
-          <div class="table-icons-row" style="display: flex; gap: 8px; align-items: center; justify-content: center; margin-bottom: 2px;">
+          <button *ngIf="(table.capacity || 4) > 4" class="btn-orient-table" title="Girar mesa (Horizontal ↔ / Vertical ↕)" (click)="toggleOrientation(table, $event); $event.stopPropagation()">
+            {{ table.orientation === 'vertical' ? '↔' : '↕' }}
+          </button>
+          <div class="table-icons-row" [style.flex-direction]="table.orientation === 'vertical' ? 'column' : 'row'" style="display: flex; gap: 8px; align-items: center; justify-content: center; margin-bottom: 2px;">
             <app-table-icon *ngFor="let i of getTableIconRange(table.capacity)" [status]="table.status" [size]="44"></app-table-icon>
           </div>
           <div class="table-name">{{ table.name }}</div>
@@ -146,6 +150,14 @@ import { TableIconComponent } from '../../shared/components/table-icon/table-ico
                 (keyup.enter)="createTable()"
               />
               <span style="font-weight: 600; font-size: 13px; color: #475569; white-space: nowrap;">comensales</span>
+            </div>
+          </div>
+
+          <div class="form-group" *ngIf="newTableCapacity > 4" style="margin-top: 8px;">
+            <label style="font-weight: 700; font-size: 13px; color: #334155; display: block; margin-bottom: 4px;">Orientación de Mesa Grande:</label>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn" [class.btn-primary]="newTableOrientation === 'horizontal'" [class.btn-secondary]="newTableOrientation !== 'horizontal'" style="flex: 1; padding: 6px; font-size: 13px;" (click)="newTableOrientation = 'horizontal'">↔ Horizontal</button>
+              <button type="button" class="btn" [class.btn-primary]="newTableOrientation === 'vertical'" [class.btn-secondary]="newTableOrientation !== 'vertical'" style="flex: 1; padding: 6px; font-size: 13px;" (click)="newTableOrientation = 'vertical'">↕ Vertical</button>
             </div>
           </div>
 
@@ -343,12 +355,31 @@ import { TableIconComponent } from '../../shared/components/table-icon/table-ico
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        opacity: 0.8;
+        z-index: 5;
+        &:hover { transform: scale(1.15); }
+      }
 
+      .btn-orient-table {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background-color: #DBEAFE;
+        color: #2563EB;
+        border: none;
+        font-size: 14px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 5;
+        transition: transform 0.2s ease, background-color 0.2s ease;
         &:hover {
-          opacity: 1;
-          background-color: #EF4444;
-          color: #FFFFFF;
+          background-color: #BFDBFE;
+          transform: scale(1.15);
         }
       }
 
@@ -503,21 +534,41 @@ export class SalonDesignComponent {
   newZoneName = '';
   newTableName = '';
   newTableCapacity = 4;
+  newTableOrientation: 'horizontal' | 'vertical' = 'horizontal';
 
   selectSalon(salonId: string): void {
     this.restaurant.activeSalonId.set(salonId);
   }
 
-  getTableWidth(capacity?: number): number {
+  getTableWidth(capacity?: number, orientation?: string): number {
+    if (orientation === 'vertical') return 140;
     const pax = capacity || 4;
     const multiplier = Math.max(1, Math.ceil(pax / 4));
-    return multiplier * 140; // 4 pax -> 140px, 8 pax -> 280px (doble), 12 pax -> 420px (triple)...
+    return multiplier * 140;
+  }
+
+  getTableHeight(capacity?: number, orientation?: string): number {
+    if (orientation !== 'vertical') return 120;
+    const pax = capacity || 4;
+    const multiplier = Math.max(1, Math.ceil(pax / 4));
+    return multiplier * 120;
   }
 
   getTableIconRange(capacity?: number): number[] {
     const pax = capacity || 4;
     const count = Math.min(4, Math.max(1, Math.ceil(pax / 4)));
     return Array.from({ length: count }, (_, i) => i);
+  }
+
+  toggleOrientation(table: Table, event: Event): void {
+    event.stopPropagation();
+    const nextOri = table.orientation === 'vertical' ? 'horizontal' : 'vertical';
+    this.restaurant.updateTableOrientation(table.id, nextOri);
+    this.notify.success({
+      title: '¡Orientación Cambiada!',
+      message: `La "${table.name}" ahora está posicionada en formato ${nextOri === 'vertical' ? 'Vertical ↕' : 'Horizontal ↔'}.`,
+      confirmText: 'Aceptar'
+    });
   }
 
   openNewZoneModal(): void {
@@ -553,6 +604,7 @@ export class SalonDesignComponent {
   openNewTableModal(): void {
     this.newTableName = `Mesa ${this.restaurant.activeSalonTables().length + 1}`;
     this.newTableCapacity = 4;
+    this.newTableOrientation = 'horizontal';
     this.showNewTableModal.set(true);
   }
 
@@ -560,11 +612,11 @@ export class SalonDesignComponent {
     const name = this.newTableName.trim();
     if (!name) return;
     const capacity = Number(this.newTableCapacity) || 4;
-    this.restaurant.addTable(this.restaurant.activeSalonId(), name, capacity);
+    this.restaurant.addTable(this.restaurant.activeSalonId(), name, capacity, this.newTableOrientation);
     this.showNewTableModal.set(false);
     this.notify.success({
       title: '¡Mesa Agregada Exitosamente!',
-      message: `Se agregó "${name}" para ${capacity} personas al diseño del salón y se conectó con Salón, Cocina y POS.`,
+      message: `Se agregó "${name}" para ${capacity} personas en formato ${this.newTableOrientation === 'vertical' ? 'Vertical ↕' : 'Horizontal ↔'} al diseño del salón.`,
       confirmText: 'Entendido'
     });
   }

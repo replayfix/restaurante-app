@@ -351,7 +351,7 @@ export class RestaurantService {
     this.saveToStorage();
   }
 
-  addTable(salonId: string, name: string, capacity: number = 4): void {
+  addTable(salonId: string, name: string, capacity: number = 4, orientation: 'horizontal' | 'vertical' = 'horizontal'): void {
     const newTable: Table = {
       id: 'table-' + Date.now(),
       salonId,
@@ -359,6 +359,7 @@ export class RestaurantService {
       x: Math.floor(Math.random() * 400) + 40,
       y: Math.floor(Math.random() * 300) + 40,
       capacity,
+      orientation,
       status: 'available'
     };
     this.tables.update(list => [...list, newTable]);
@@ -367,6 +368,11 @@ export class RestaurantService {
 
   updateTableCapacity(tableId: string, capacity: number): void {
     this.tables.update(list => list.map(t => t.id === tableId ? { ...t, capacity } : t));
+    this.saveToStorage();
+  }
+
+  updateTableOrientation(tableId: string, orientation: 'horizontal' | 'vertical'): void {
+    this.tables.update(list => list.map(t => t.id === tableId ? { ...t, orientation } : t));
     this.saveToStorage();
   }
 
