@@ -78,6 +78,9 @@ import { TableIconComponent } from '../../shared/components/table-icon/table-ico
           <div class="table-icons-row" [style.flex-direction]="table.orientation === 'vertical' ? 'column' : 'row'" style="display: flex; gap: 8px; align-items: center; justify-content: center; margin-bottom: 2px;">
             <app-table-icon *ngFor="let i of getTableIconRange(table.capacity)" [status]="table.status" [size]="44"></app-table-icon>
           </div>
+          <div *ngIf="restaurant.isTableReadyToPickup(table.id)" class="badge-ready-pulse" style="background: #10B981; color: white; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 6px; margin-bottom: 2px; box-shadow: 0 0 8px rgba(16,185,129,0.8); animation: pulse 1.5s infinite;">
+            🔔 ¡Listo!
+          </div>
           <div class="table-name">{{ table.name }}</div>
           <button
             type="button"

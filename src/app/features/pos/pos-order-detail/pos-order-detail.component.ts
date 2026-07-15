@@ -137,6 +137,10 @@ import { ThermalTicketModalComponent } from '../thermal-ticket-modal/thermal-tic
 
           <!-- Items List -->
           <div class="cart-items-list">
+            <div *ngIf="hasReadyItems(order)" class="order-ready-banner" style="background: linear-gradient(90deg, #10B981, #059669); color: white; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; margin: 8px 12px 10px 12px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+              <span>🔔 ¡PEDIDO LISTO EN COCINA! Los platillos han sido terminados y están listos en ventanilla para ser recogidos por el mesero.</span>
+            </div>
+
             <div *ngFor="let item of order.items" class="cart-item-row">
               <!-- Delete & Edit column -->
               <div class="item-actions">
@@ -145,7 +149,11 @@ import { ThermalTicketModalComponent } from '../thermal-ticket-modal/thermal-tic
 
               <!-- Product info -->
               <div class="item-info">
-                <span class="item-name">{{ item.productName }}</span>
+                <span class="item-name">
+                  {{ item.productName }}
+                  <span *ngIf="item.kdsStatus === 'ready'" style="background: #D1FAE5; color: #065F46; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-left: 6px;">🔔 LISTO PARA RECOGER</span>
+                  <span *ngIf="item.kdsStatus === 'preparing'" style="background: #FEF3C7; color: #92400E; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-left: 6px;">👨‍🍳 En Cocina</span>
+                </span>
                 <span class="item-unit-price">S/. {{ item.price.toFixed(2) }}</span>
                 <button class="btn-notes" (click)="openNotesModal(item)">✏️ {{ item.notes ? 'Nota' : '' }}</button>
               </div>
@@ -1018,6 +1026,10 @@ export class PosOrderDetailComponent implements OnInit {
   newCrmName = '';
   newCrmPhone = '';
   targetTableId = '';
+
+  hasReadyItems(order: Order): boolean {
+    return order.items.some(i => i.kdsStatus === 'ready');
+  }
   brokenImages = signal<Set<string>>(new Set());
 
   getTableCapacity(tableId: string): number {

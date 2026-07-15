@@ -51,6 +51,9 @@ import { TableIconComponent } from '../../../shared/components/table-icon/table-
             <div class="table-card-header" [ngClass]="table.status">
               <span class="status-indicator-dot"></span>
               <span class="t-title">{{ table.name.toUpperCase() }}</span>
+              <span *ngIf="restaurant.isTableReadyToPickup(table.id)" class="badge-ready-pulse" style="background: #10B981; color: white; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 6px; margin-left: auto; box-shadow: 0 0 8px rgba(16,185,129,0.8); animation: pulse 1.5s infinite;">
+                🔔 Listo
+              </span>
             </div>
 
             <!-- Table Center Icon & Status Info -->

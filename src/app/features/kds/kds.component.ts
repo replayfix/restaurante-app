@@ -353,10 +353,6 @@ export class KdsComponent implements OnInit, OnDestroy {
   }
 
   markAllReady(order: Order): void {
-    order.items.forEach(item => {
-      if (item.kdsStatus === 'pending' || item.kdsStatus === 'preparing') {
-        this.restaurant.updateOrderItemKdsStatus(order.id, item.id, 'ready');
-      }
-    });
+    this.restaurant.markOrderAsReady(order.id);
   }
 }

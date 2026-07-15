@@ -2,11 +2,14 @@ import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { Firestore, doc, getDoc, setDoc, onSnapshot } from '@angular/fire/firestore';
 import { Salon, Table, Category, Product, Order, OrderItem, Reservation, Client, Staff, CashTransaction, PaymentMethod, KdsStatus } from '../models';
 import { MockDataService } from './mock-data.service';
+import { NotificationModalService } from './notification-modal.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class RestaurantService {
+  private notify = inject(NotificationModalService);
+
   // Signals state
   readonly salons = signal<Salon[]>([]);
   readonly tables = signal<Table[]>([]);
@@ -108,6 +111,15 @@ export class RestaurantService {
   readonly pendingKdsOrders = computed(() => {
     return this.openOrders().filter(o => o.items.some(i => i.kdsStatus === 'pending' || i.kdsStatus === 'preparing'));
   });
+
+  readonly readyToPickupOrders = computed(() => {
+    return this.openOrders().filter(o => o.items.some(i => i.kdsStatus === 'ready'));
+  });
+
+  isTableReadyToPickup(tableId: string): boolean {
+    const order = this.orders().find(o => o.tableId === tableId && o.status === 'open');
+    return !!order && order.items.some(i => i.kdsStatus === 'ready');
+  }
 
   readonly reportsData = computed(() => {
     const totalSales = this.todaySalesTotal();
@@ -543,6 +555,9 @@ export class RestaurantService {
   // --- KDS Kitchen status updates ---
   updateOrderItemKdsStatus(orderId: string, itemId: string, kdsStatus: KdsStatus): void {
     const currentChef = this.currentUser().name;
+    const orderBefore = this.orders().find(o => o.id === orderId);
+    const itemBefore = orderBefore?.items.find(i => i.id === itemId);
+
     this.orders.update(list => list.map(order => {
       if (order.id !== orderId) return order;
       const updatedItems = order.items.map(i => i.id === itemId ? { ...i, kdsStatus, chefName: currentChef } : i);
@@ -553,6 +568,43 @@ export class RestaurantService {
       };
     }));
     this.saveToStorage();
+
+    if (kdsStatus === 'ready' && orderBefore && itemBefore) {
+      const updatedOrder = this.orders().find(o => o.id === orderId);
+      const allReady = updatedOrder?.items.every(i => i.kdsStatus === 'ready' || i.kdsStatus === 'delivered');
+      if (allReady) {
+        this.notify.success({
+          title: '🔔 ¡PEDIDO COMPLETO LISTO PARA RECOGER!',
+          message: `✨ El pedido ${orderBefore.folio} de ${orderBefore.tableName || 'Mesa'} ha sido completado al 100% por cocina (${currentChef}). ¡Listo en ventanilla para que ${orderBefore.waiterName || 'el mesero'} lo entregue!`,
+          confirmText: '¡Avisado al Mesero!'
+        });
+      } else {
+        this.notify.success({
+          title: '🍽️ ¡PLATO LISTO PARA RECOGER!',
+          message: `👨‍🍳 Cocina (${currentChef}) terminó: "${itemBefore.productName}" (Pedido ${orderBefore.folio} - ${orderBefore.tableName || 'Mesa'}). ¡Listo en ventanilla para ${orderBefore.waiterName || 'el mesero'}!`,
+          confirmText: 'Aceptar'
+        });
+      }
+    }
+  }
+
+  markOrderAsReady(orderId: string): void {
+    const currentChef = this.currentUser().name;
+    const order = this.orders().find(o => o.id === orderId);
+    if (!order) return;
+
+    const updatedItems = order.items.map(i => 
+      (i.kdsStatus === 'pending' || i.kdsStatus === 'preparing') ? { ...i, kdsStatus: 'ready' as const, chefName: currentChef } : i
+    );
+
+    this.orders.update(list => list.map(o => o.id === orderId ? { ...o, chefName: currentChef, items: updatedItems } : o));
+    this.saveToStorage();
+
+    this.notify.success({
+      title: '🔔 ¡PEDIDO LISTO PARA RECOGER!',
+      message: `✨ El pedido ${order.folio} (${order.tableName || 'Mesa'}) ha sido terminado al 100% por cocina (${currentChef}) y está listo en ventanilla para que el mesero (${order.waiterName || 'Mesero'}) lo lleve a la mesa.`,
+      confirmText: '¡Notificado al Mesero!'
+    });
   }
 
   // --- Cobrar / Checkout Order ---
