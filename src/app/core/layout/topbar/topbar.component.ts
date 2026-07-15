@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -36,17 +36,18 @@ import { RestaurantService } from '../../services/restaurant.service';
       </div>
     </header>
 
-    <!-- Modal Elegante para Cambiar de Puesto / Terminal -->
+    <!-- Modal Elegante para Cambiar de Puesto / Terminal / Login inicial -->
     <div class="profile-modal-backdrop" *ngIf="showProfileModal" (click)="closeProfileModal()">
       <div class="profile-modal-card" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="header-title">
-            <h3>📱 Modo y Nombre de Usuario</h3>
+            <h3>📱 Modo de Operación y Usuario</h3>
             <button class="btn-close" (click)="closeProfileModal()">×</button>
           </div>
-          <p *ngIf="!selectedRoleMode">Selecciona el modo o puesto en esta pantalla para identificarte en el sistema:</p>
+          <p *ngIf="!selectedRoleMode">Selecciona el modo o puesto con el que vas a operar hoy en el sistema:</p>
           <p *ngIf="selectedRoleMode === 'Mesero'">👤 Escribe el nombre del <strong>Mesero</strong> que operará en este turno o elige uno existente:</p>
           <p *ngIf="selectedRoleMode === 'Cajero'">💻 Escribe el nombre del <strong>Cajero / Administrador</strong> o elige uno existente:</p>
+          <p *ngIf="selectedRoleMode === 'Cocinero'">🔥 Escribe el nombre del <strong>Chef / Estación de Cocina</strong> o elige uno existente:</p>
         </div>
 
         <!-- Paso 1: Botones de Modo / Puesto -->
@@ -69,7 +70,7 @@ import { RestaurantService } from '../../services/restaurant.service';
             <span class="mode-arrow">➔</span>
           </div>
 
-          <div class="role-mode-card cocinero" (click)="selectDirectChef()">
+          <div class="role-mode-card cocinero" (click)="chooseRoleMode('Cocinero')">
             <span class="mode-icon">🔥</span>
             <div class="mode-text">
               <h4>Modo Cocinero (KDS)</h4>
@@ -79,7 +80,7 @@ import { RestaurantService } from '../../services/restaurant.service';
           </div>
         </div>
 
-        <!-- Paso 2: Asignar o Elegir Nombre exacto (Mesero / Cajero) -->
+        <!-- Paso 2: Asignar o Elegir Nombre exacto (Mesero / Cajero / Cocinero) -->
         <div class="assign-name-section" *ngIf="selectedRoleMode">
           <div class="custom-name-box">
             <label>✍️ Nombre del {{ selectedRoleMode }}:</label>
@@ -87,7 +88,7 @@ import { RestaurantService } from '../../services/restaurant.service';
               <input
                 type="text"
                 [(ngModel)]="customStaffName"
-                [placeholder]="selectedRoleMode === 'Mesero' ? 'Ej. Carlos, Jonathan, María...' : 'Ej. Administrador, Jonathan, Sara...'"
+                [placeholder]="selectedRoleMode === 'Mesero' ? 'Ej. Carlos, Jonathan, María...' : (selectedRoleMode === 'Cocinero' ? 'Ej. Chef Carlos, Cocina Principal...' : 'Ej. Administrador, Jonathan, Sara...')"
                 class="name-input"
                 (keyup.enter)="confirmCustomUser()"
                 #nameInput
@@ -491,12 +492,20 @@ import { RestaurantService } from '../../services/restaurant.service';
     }
   `]
 })
-export class TopbarComponent {
+export class TopbarComponent implements OnInit {
   restaurant = inject(RestaurantService);
   router = inject(Router);
   showProfileModal = false;
   selectedRoleMode: string | null = null;
   customStaffName: string = '';
+
+  ngOnInit(): void {
+    if (!sessionStorage.getItem('restaurante_session_mode_selected')) {
+      setTimeout(() => {
+        this.showProfileModal = true;
+      }, 300);
+    }
+  }
 
   closeProfileModal(): void {
     this.showProfileModal = false;
@@ -526,6 +535,7 @@ export class TopbarComponent {
       const r = (s.role || '').toLowerCase();
       if (target === 'mesero') return r === 'mesero';
       if (target === 'cajero') return r === 'cajero' || r === 'administrador';
+      if (target === 'cocinero') return r === 'cocinero' || r === 'chef';
       return false;
     });
   }
@@ -534,21 +544,22 @@ export class TopbarComponent {
     const name = this.customStaffName.trim();
     if (!name || !this.selectedRoleMode) return;
 
-    const idPrefix = this.selectedRoleMode.toLowerCase() === 'mesero' ? 'mesero-' : 'cajero-';
+    const idPrefix = this.selectedRoleMode.toLowerCase() === 'mesero' ? 'mesero-' : (this.selectedRoleMode.toLowerCase() === 'cocinero' ? 'cocinero-' : 'cajero-');
     const cleanId = idPrefix + name.toLowerCase().replace(/\s+/g, '-');
-    const roleName = this.selectedRoleMode === 'Mesero' ? 'Mesero' : (name.toLowerCase().includes('admin') ? 'Administrador' : 'Cajero');
+    const roleName = this.selectedRoleMode === 'Mesero' ? 'Mesero' : (this.selectedRoleMode === 'Cocinero' ? 'Cocinero' : (name.toLowerCase().includes('admin') ? 'Administrador' : 'Cajero'));
 
     const newStaff = {
       id: cleanId,
       name: name,
       role: roleName,
-      avatar: name.charAt(0).toUpperCase()
+      avatar: roleName === 'Cocinero' ? '👨‍🍳' : (roleName === 'Mesero' ? '🍽️' : name.charAt(0).toUpperCase())
     };
 
     this.selectUser(newStaff);
   }
 
   selectUser(member: any): void {
+    sessionStorage.setItem('restaurante_session_mode_selected', 'true');
     this.restaurant.switchUser(member);
     this.closeProfileModal();
     const role = (member.role || '').toLowerCase();
