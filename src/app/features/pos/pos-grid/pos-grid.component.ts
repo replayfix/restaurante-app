@@ -42,6 +42,7 @@ import { TableIconComponent } from '../../../shared/components/table-icon/table-
           <div
             *ngFor="let table of restaurant.activeSalonTables()"
             class="table-card"
+            [style.grid-column]="getGridSpan(table.capacity)"
             [ngClass]="table.status"
             (click)="onTableClick(table)">
             
@@ -53,7 +54,9 @@ import { TableIconComponent } from '../../../shared/components/table-icon/table-
 
             <!-- Table Center Icon & Status Info -->
             <div class="table-card-body" [ngClass]="table.status">
-              <app-table-icon [status]="table.status" [size]="50"></app-table-icon>
+              <div class="table-icons-row" style="display: flex; gap: 8px; align-items: center; justify-content: center; margin-bottom: 6px;">
+                <app-table-icon *ngFor="let i of getTableIconRange(table.capacity)" [status]="table.status" [size]="50"></app-table-icon>
+              </div>
 
               <!-- If table has a reservation today, show clear reservation card -->
               <div *ngIf="table.reservationInfo && table.status === 'reserved'" class="res-card-center">
@@ -377,8 +380,19 @@ export class PosGridComponent {
   private router = inject(Router);
 
   onTableClick(table: Table): void {
-    // Open order or select table order and navigate to detail view
     this.restaurant.openOrSelectTableOrder(table.id);
     this.router.navigate(['/pos', table.id]);
+  }
+
+  getGridSpan(capacity?: number): string {
+    const pax = capacity || 4;
+    const span = Math.min(4, Math.max(1, Math.ceil(pax / 4)));
+    return `span ${span}`;
+  }
+
+  getTableIconRange(capacity?: number): number[] {
+    const pax = capacity || 4;
+    const count = Math.min(4, Math.max(1, Math.ceil(pax / 4)));
+    return Array.from({ length: count }, (_, i) => i);
   }
 }

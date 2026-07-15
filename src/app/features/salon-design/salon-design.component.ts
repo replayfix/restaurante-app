@@ -68,9 +68,12 @@ import { TableIconComponent } from '../../shared/components/table-icon/table-ico
           [cdkDragFreeDragPosition]="{ x: table.x, y: table.y }"
           (cdkDragEnded)="onTableDragEnd($event, table)"
           class="draggable-table"
+          [style.width.px]="getTableWidth(table.capacity)"
           [ngClass]="table.status">
           <button class="btn-delete-table" (click)="deleteTable(table.id); $event.stopPropagation()">×</button>
-          <app-table-icon [status]="table.status" [size]="44"></app-table-icon>
+          <div class="table-icons-row" style="display: flex; gap: 8px; align-items: center; justify-content: center; margin-bottom: 2px;">
+            <app-table-icon *ngFor="let i of getTableIconRange(table.capacity)" [status]="table.status" [size]="44"></app-table-icon>
+          </div>
           <div class="table-name">{{ table.name }}</div>
           <button
             type="button"
@@ -503,6 +506,18 @@ export class SalonDesignComponent {
 
   selectSalon(salonId: string): void {
     this.restaurant.activeSalonId.set(salonId);
+  }
+
+  getTableWidth(capacity?: number): number {
+    const pax = capacity || 4;
+    const multiplier = Math.max(1, Math.ceil(pax / 4));
+    return multiplier * 140; // 4 pax -> 140px, 8 pax -> 280px (doble), 12 pax -> 420px (triple)...
+  }
+
+  getTableIconRange(capacity?: number): number[] {
+    const pax = capacity || 4;
+    const count = Math.min(4, Math.max(1, Math.ceil(pax / 4)));
+    return Array.from({ length: count }, (_, i) => i);
   }
 
   openNewZoneModal(): void {
