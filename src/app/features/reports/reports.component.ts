@@ -25,6 +25,9 @@ import { RestaurantService } from '../../core/services/restaurant.service';
           <button class="btn btn-secondary" (click)="exportToCSV()">
             <span>📥 Exportar CSV</span>
           </button>
+          <button class="btn btn-secondary" style="border-color: #EF4444; color: #EF4444;" (click)="purgeAllData()" title="Limpiar todas las mesas, pedidos y productos para iniciar desde 0">
+            <span>🗑️ Reiniciar (0 Datos)</span>
+          </button>
         </div>
       </div>
 
@@ -272,5 +275,12 @@ export class ReportsComponent {
 
   exportToCSV(): void {
     alert('Generando archivo CSV con el reporte analítico detallado del día...');
+  }
+
+  purgeAllData(): void {
+    if (confirm('¿Estás seguro de que deseas LIMPIAR TODO EL SISTEMA y dejarlo en 0? Se borrarán todas las mesas, productos, categorías y pedidos.')) {
+      this.restaurant.purgeSystemToCleanState();
+      alert('¡Sistema purgado y listo desde 0 para producción!');
+    }
   }
 }

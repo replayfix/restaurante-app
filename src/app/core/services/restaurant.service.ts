@@ -284,33 +284,59 @@ export class RestaurantService {
   }
 
   private async loadInitialState(): Promise<void> {
-    const saved = localStorage.getItem('restaurante_state_v1');
-    if (saved) {
-      try {
-        const data = JSON.parse(saved);
-        this.salons.set(data.salons || this.mockService.getInitialSalons());
-        this.tables.set(data.tables || this.mockService.getInitialTables());
-        this.categories.set(data.categories || this.mockService.getInitialCategories());
-        this.products.set(data.products || this.mockService.getInitialProducts());
-        this.orders.set(data.orders || this.mockService.getInitialOrders());
-        this.reservations.set(data.reservations || this.mockService.getInitialReservations());
-        this.clients.set(data.clients || this.mockService.getInitialClients());
-        this.staff.set(data.staff || this.mockService.getInitialStaff());
-        this.transactions.set(data.transactions || this.mockService.getInitialTransactions());
-      } catch (e) {
-        console.warn('Error loading localStorage, falling back to mock data', e);
+    const isCleanProdRun = localStorage.getItem('restaurante_clean_prod_v2');
+    if (!isCleanProdRun) {
+      localStorage.removeItem('restaurante_state_v1');
+      this.resetToDefaultMockData();
+      localStorage.setItem('restaurante_clean_prod_v2', 'true');
+      console.log('✨ Sistema purgado y listo desde 0 para producción');
+    } else {
+      const saved = localStorage.getItem('restaurante_state_v1');
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          this.salons.set(data.salons || this.mockService.getInitialSalons());
+          this.tables.set(data.tables || this.mockService.getInitialTables());
+          this.categories.set(data.categories || this.mockService.getInitialCategories());
+          this.products.set(data.products || this.mockService.getInitialProducts());
+          this.orders.set(data.orders || this.mockService.getInitialOrders());
+          this.reservations.set(data.reservations || this.mockService.getInitialReservations());
+          this.clients.set(data.clients || this.mockService.getInitialClients());
+          this.staff.set(data.staff || this.mockService.getInitialStaff());
+          this.transactions.set(data.transactions || this.mockService.getInitialTransactions());
+        } catch (e) {
+          console.warn('Error loading localStorage, falling back to mock data', e);
+          this.resetToDefaultMockData();
+        }
+      } else {
         this.resetToDefaultMockData();
       }
-    } else {
-      this.resetToDefaultMockData();
     }
 
     // Sincronización en vivo desde Cloud Firestore (Tiempo Real para conectar Mesero, Cocina y Caja)
     if (this.firestore) {
       try {
         const docRef = doc(this.firestore, 'restaurante_db', 'main_state');
+        if (!isCleanProdRun) {
+          const cleanState = JSON.parse(JSON.stringify({
+            salons: this.mockService.getInitialSalons(),
+            tables: this.mockService.getInitialTables(),
+            categories: this.mockService.getInitialCategories(),
+            products: this.mockService.getInitialProducts(),
+            orders: this.mockService.getInitialOrders(),
+            reservations: this.mockService.getInitialReservations(),
+            clients: this.mockService.getInitialClients(),
+            staff: this.mockService.getInitialStaff(),
+            transactions: this.mockService.getInitialTransactions()
+          }));
+          setDoc(docRef, cleanState).then(() => {
+            console.log('✅ Base de datos Firestore purgada y lista desde 0 para producción');
+          }).catch(() => {});
+        }
+
         // onSnapshot escucha instantáneamente cualquier cambio hecho desde otra tablet o PC
         onSnapshot(docRef, (snap) => {
+          if (!localStorage.getItem('restaurante_clean_prod_v2')) return;
           if (snap.exists()) {
             const data = snap.data();
             if (data && data['salons']) {
@@ -352,6 +378,27 @@ export class RestaurantService {
     this.staff.set(this.mockService.getInitialStaff());
     this.transactions.set(this.mockService.getInitialTransactions());
     this.saveToStorage();
+  }
+
+  purgeSystemToCleanState(): void {
+    localStorage.removeItem('restaurante_state_v1');
+    localStorage.removeItem('restaurante_clean_prod_v2');
+    this.resetToDefaultMockData();
+    if (this.firestore) {
+      const docRef = doc(this.firestore, 'restaurante_db', 'main_state');
+      const cleanState = JSON.parse(JSON.stringify({
+        salons: this.mockService.getInitialSalons(),
+        tables: [],
+        categories: [],
+        products: [],
+        orders: [],
+        reservations: [],
+        clients: [],
+        staff: this.mockService.getInitialStaff(),
+        transactions: []
+      }));
+      setDoc(docRef, cleanState).catch(() => {});
+    }
   }
 
   private saveToStorage(): void {
